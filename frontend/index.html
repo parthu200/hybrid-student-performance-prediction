@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduPredict AI — Student Performance Prediction</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app">
+
+    
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">🎓</div>
+        <div>
+          <div class="logo-text">EduPredict <span class="teal">AI</span></div>
+          <div class="logo-sub">Hybrid ML · Student Performance Prediction</div>
+        </div>
+      </div>
+
+    </header>
+
+    
+    <nav class="nav">
+      <button class="nav-btn active" onclick="showTab('dashboard', this)">📊 Dashboard</button>
+      <button class="nav-btn" onclick="showTab('predict', this)">🔮 Predict</button>
+      <button class="nav-btn" onclick="showTab('analytics', this)">📈 Analytics</button>
+      <button class="nav-btn" onclick="showTab('upload', this)">📂 Upload</button>
+      <button class="nav-btn" onclick="showTab('about', this)">📄 Research</button>
+    </nav>
+
+    
+    <section id="tab-dashboard">
+      <div class="grid-4">
+        <div class="card-sm">
+          <div class="stat-label">Hybrid Accuracy</div>
+          <div class="stat-val teal">96.2%</div>
+          <div class="stat-sub">↑ 7.7% vs Linear Reg</div>
+        </div>
+        <div class="card-sm">
+          <div class="stat-label">F1 Score</div>
+          <div class="stat-val blue">94.3</div>
+          <div class="stat-sub">Hybrid model</div>
+        </div>
+        <div class="card-sm">
+          <div class="stat-label">Recall</div>
+          <div class="stat-val amber">93.9%</div>
+          <div class="stat-sub">Students correctly flagged</div>
+        </div>
+        <div class="card-sm">
+          <div class="stat-label">Models Tested</div>
+          <div class="stat-val green">5 + 1</div>
+          <div class="stat-sub">5 base + 1 hybrid</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title"><span class="dot"></span>Model Accuracy Comparison</div>
+          <div class="chart-wrap" style="height:220px">
+            <canvas id="accChart"
+              role="img"
+              aria-label="Bar chart comparing ML model accuracies. Hybrid model leads at 96.2%.">
+              Linear Regression 88.5%, Decision Tree 91.7%, Random Forest 95.4%,
+              SVR 93.2%, ANN 94.6%, Hybrid 96.2%
+            </canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title"><span class="dot"></span>Feature Importance</div>
+          <div class="chart-wrap" style="height:220px">
+            <canvas id="pieChart"
+              role="img"
+              aria-label="Pie chart of feature importance. Learning Coefficients lead at 35%.">
+              Learning Coefficients 35%, Academic 30%, Behavioral 25%, Demographics 10%
+            </canvas>
+          </div>
+          <div class="pie-legend" id="pieLegend"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><span class="dot"></span>Model Performance Comparison Table</div>
+        <table class="model-table">
+          <thead>
+            <tr>
+              <th>Model</th><th>Accuracy</th><th>Precision</th>
+              <th>Recall</th><th>F1-Score</th><th>Performance Bar</th>
+            </tr>
+          </thead>
+          <tbody id="modelTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    
+    <section id="tab-predict" style="display:none">
+      <div class="grid-2">
+
+        
+        <div class="card">
+          <div class="section-title"><span class="dot"></span>Academic Features</div>
+          <div class="form-grid" id="academicInputs"></div>
+
+          <div class="section-title" style="margin-top:14px"><span class="dot"></span>Behavioral Features</div>
+          <div class="form-grid" id="behavioralInputs"></div>
+
+          <div class="section-title" style="margin-top:14px"><span class="dot"></span>Learning Coefficients</div>
+          <div class="form-grid" id="learningInputs"></div>
+
+          <div class="form-grid" style="margin-top:14px" id="metaInputs"></div>
+
+          <button class="btn-predict" id="predictBtn" onclick="runPrediction()">
+            🔮 Run Hybrid ML Prediction
+          </button>
+        </div>
+
+        
+        <div>
+          
+          <div id="predictPlaceholder" class="card placeholder-card">
+            <div style="font-size:52px;margin-bottom:16px">🎓</div>
+            <div class="placeholder-title">Ready to Predict</div>
+            <div class="placeholder-sub">
+              Configure student parameters on the left and click<br>
+              <strong class="teal">Run Hybrid ML Prediction</strong> to get results.
+            </div>
+          </div>
+
+          
+          <div id="resultSection" style="display:none">
+            <div class="result-card" id="resultCard">
+              <div id="loadingOverlay" class="loading-overlay" style="display:none">
+                <div class="spinner"></div>
+                <div class="loading-text">Running hybrid model…</div>
+              </div>
+
+              <div class="result-header">
+                <div>
+                  <div class="result-meta-label">PREDICTED SCORE</div>
+                  <div class="result-score teal" id="predScore">—</div>
+                </div>
+                <div class="result-divider">
+                  <div class="result-meta-label">GRADE</div>
+                  <div class="result-grade"><span id="predGrade">—</span></div>
+                  <div style="margin-top:8px"><span class="risk-badge" id="riskBadge">—</span></div>
+                </div>
+              </div>
+
+              
+              <div class="conf-label">MODEL CONFIDENCE</div>
+              <div class="conf-row">
+                <div class="conf-cell">
+                  <div class="conf-val blue" id="confLR">—</div>
+                  <div class="conf-name">Linear Reg</div>
+                </div>
+                <div class="conf-cell">
+                  <div class="conf-val green" id="confRF">—</div>
+                  <div class="conf-name">Rnd. Forest</div>
+                </div>
+                <div class="conf-cell">
+                  <div class="conf-val amber" id="confANN">—</div>
+                  <div class="conf-name">ANN</div>
+                </div>
+                <div class="conf-cell conf-cell-highlight">
+                  <div class="conf-val teal" id="confHybrid">—</div>
+                  <div class="conf-name teal">Hybrid ✦</div>
+                </div>
+              </div>
+
+              
+              <div id="suggestionsBox"></div>
+            </div>
+
+            
+            <div class="card" style="margin-top:16px">
+              <div class="section-title"><span class="dot"></span>Feature Contribution Radar</div>
+              <div class="chart-wrap" style="height:200px">
+                <canvas id="radarChart" role="img" aria-label="Radar chart of student feature contributions.">Feature contributions for current student</canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    
+    <section id="tab-analytics" style="display:none">
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title"><span class="dot"></span>Training vs Testing Accuracy</div>
+          <div class="chart-wrap" style="height:220px">
+            <canvas id="trainChart"
+              role="img"
+              aria-label="Line chart of training and testing accuracy over 5 epochs.">
+              Training rises from 75% to 95.2%, Testing from 73% to 94.1% over 5 epochs.
+            </canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title"><span class="dot"></span>Confusion Matrix — Hybrid Model</div>
+          <div id="confusionMatrix"></div>
+          <div class="cm-stats" id="cmStats"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="section-title"><span class="dot"></span>Dataset Score Distribution</div>
+        <div class="chart-wrap" style="height:200px">
+          <canvas id="distChart"
+            role="img"
+            aria-label="Histogram of student performance scores from 30 to 90.">
+            Peak around 50–60, with 185 students in that range.
+          </canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><span class="dot"></span>Multi-Metric Comparison — All Models</div>
+        <div class="chart-wrap" style="height:250px">
+          <canvas id="multiChart"
+            role="img"
+            aria-label="Grouped bar chart of accuracy, precision, recall and F1 across all models.">
+            Hybrid model outperforms all others across every metric.
+          </canvas>
+        </div>
+      </div>
+    </section>
+
+    
+    <section id="tab-upload" style="display:none">
+
+      
+      <div class="upload-action-bar">
+        <div>
+          <div class="upload-title">📂 Batch Student Prediction</div>
+          <div class="upload-subtitle">Upload a CSV of students and get instant predictions for all of them</div>
+        </div>
+        <button class="btn-template" onclick="downloadTemplate()">
+          ⬇ Download CSV Template
+        </button>
+      </div>
+
+      
+      <div class="drop-zone card" id="dropZone"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event)"
+           onclick="document.getElementById('csvFileInput').click()">
+        <input type="file" id="csvFileInput" accept=".csv" style="display:none"
+               onchange="handleFileSelect(event)" />
+        <div class="drop-icon">📄</div>
+        <div class="drop-main">Drag &amp; drop your CSV here, or <span class="teal">click to browse</span></div>
+        <div class="drop-sub">Supports .csv files up to 5 MB · Max 500 students per batch</div>
+        <div class="drop-formats">
+          Required columns:
+          <code>cgpa</code> <code>prevGrade</code> <code>examScore</code>
+          <code>studyHours</code> <code>attendance</code> <code>lms</code>
+          <code>assignments</code> <code>participation</code>
+          <code>adaptive</code> <code>contEval</code>
+        </div>
+      </div>
+
+      
+      <div id="fileInfoBar" class="file-info-bar" style="display:none">
+        <div class="file-info-left">
+          <span class="file-icon">📄</span>
+          <div>
+            <div class="file-name" id="fileName">—</div>
+            <div class="file-meta" id="fileMeta">—</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span class="file-status" id="fileStatus">Ready</span>
+          <button class="btn-clear" onclick="clearUpload()">✕ Clear</button>
+        </div>
+      </div>
+
+      
+      <div id="previewSection" style="display:none">
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-title"><span class="dot"></span>Data Preview <span id="previewCount" class="badge" style="font-size:10px;margin-left:6px">0 rows</span></div>
+          <div class="table-scroll">
+            <table class="data-table" id="previewTable"></table>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+            <div style="font-size:12px;color:var(--muted)">Showing first 5 rows · Full dataset will be processed</div>
+            <button class="btn-run-batch" id="batchBtn" onclick="runBatchPrediction()">
+              ⚡ Run Batch Prediction
+            </button>
+          </div>
+        </div>
+      </div>
+
+      
+      <div id="batchResultsSection" style="display:none">
+
+        
+        <div class="grid-4" id="batchStatCards"></div>
+
+        
+        <div class="grid-2" style="margin-bottom:16px">
+          <div class="card">
+            <div class="section-title"><span class="dot"></span>Grade Distribution</div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="batchGradeChart" role="img" aria-label="Bar chart of grade distribution from batch prediction.">Grade distribution of uploaded students.</canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-title"><span class="dot"></span>Risk Level Breakdown</div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="batchRiskChart" role="img" aria-label="Doughnut chart showing risk level breakdown.">Risk level distribution of uploaded students.</canvas>
+            </div>
+            <div class="pie-legend" id="riskLegend"></div>
+          </div>
+        </div>
+
+        
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-title"><span class="dot"></span>Predicted Score Distribution</div>
+          <div class="chart-wrap" style="height:180px">
+            <canvas id="batchScoreChart" role="img" aria-label="Histogram of predicted scores.">Score distribution of batch prediction results.</canvas>
+          </div>
+        </div>
+
+        
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <div class="section-title" style="margin-bottom:0"><span class="dot"></span>Full Results Table <span id="resultsCount" class="badge" style="font-size:10px;margin-left:6px">0 students</span></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" id="resultsSearch" placeholder="🔍 Search student ID…"
+                     oninput="filterResults(this.value)"
+                     style="background:#0a1020;border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;outline:none;width:180px" />
+              <select id="riskFilter" onchange="filterResults()"
+                      style="background:#0a1020;border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--muted2);font-family:'Space Grotesk',sans-serif;font-size:13px;outline:none;cursor:pointer">
+                <option value="">All Risk Levels</option>
+                <option value="High">High Risk</option>
+                <option value="Medium">Medium Risk</option>
+                <option value="Low">Low Risk</option>
+              </select>
+              <button class="btn-export" onclick="exportResultsCSV()">⬇ Export CSV</button>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table results-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Student ID</th><th>CGPA</th><th>Attendance</th>
+                  <th>Exam</th><th>LMS</th><th>Adaptive</th>
+                  <th>Score</th><th>Grade</th><th>Risk</th><th>Top Suggestion</th>
+                </tr>
+              </thead>
+              <tbody id="resultsTableBody"></tbody>
+            </table>
+          </div>
+          <div id="noResultsMsg" style="display:none;text-align:center;padding:24px;color:var(--muted);font-size:13px">No students match the current filter.</div>
+        </div>
+
+      </div>
+    </section>
+
+    
+    <section id="tab-about" style="display:none">
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title"><span class="dot"></span>Research Paper</div>
+          <div class="about-block">
+            <h3>Hybrid Student Performance Prediction Using Machine Learning and Learning Coefficients</h3>
+            <p style="margin-top:8px">
+              <strong class="teal">Author:</strong> Pathi Partha Saradhi Reddy<br>
+              <strong class="teal">Institution:</strong> Joy University, Dept. of Computer Science<br>
+              <strong class="teal">Email:</strong> bcai23002@joyuniversity.edu.in<br>
+              <strong class="teal">Under The guidance of:</strong> Prof.Mary Disilva Princy
+            </p>
+          </div>
+          <div class="about-block">
+            <h3>Abstract</h3>
+            <p>
+              A hybrid ML framework combining academic records, behavioral patterns, and adaptive
+              learning indicators. Five algorithms (LR, DT, RF, SVR, ANN) merged into a hybrid
+              ensemble achieving 96.2% accuracy, supported by novel learning coefficients that
+              track temporal student engagement.
+            </p>
+          </div>
+          <div>
+            <div class="section-title"><span class="dot"></span>Index Terms</div>
+            <div id="tagContainer"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title"><span class="dot"></span>System Architecture Pipeline</div>
+          <div id="pipelineContainer"></div>
+          <div class="section-title" style="margin-top:20px"><span class="dot"></span>Research Gaps Addressed</div>
+          <div id="gapsContainer"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><span class="dot"></span>References</div>
+        <div class="refs-grid" id="refsContainer"></div>
+      </div>
+    </section>
+
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/predict.js"></script>
+  <script src="js/upload.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
